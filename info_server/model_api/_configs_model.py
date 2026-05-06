@@ -1,22 +1,12 @@
 from pydantic import BaseModel, Field
 from typing import Literal
 from .models import ModelAPIData
-
-class HTTPLimit(BaseModel):
-    max_connections: int | None = 100
-    max_keepalive_connections: int | None = 20
-    keepalive_expiry: int | float | None = 5
-
-class HTTPTimeouts(BaseModel):
-    connect: int | float | None = 5
-    read: int | float | None = 5
-    write: int | float | None = 5
-    pool: int | float | None = None
+from ._connection_model import HTTPLimit, HTTPTimeouts
 
 class ProviderConfig(BaseModel):
     url: str = ""
     limit: HTTPLimit | None = None
-    timeout: int | float | HTTPTimeouts | None = None
+    timeout: int | float | HTTPTimeouts | None = 600.0
     proxy: str | None = None
 
     name: str = ""

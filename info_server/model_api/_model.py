@@ -1,5 +1,7 @@
 from pydantic import BaseModel, Field
 from .models import ModelAPIData
+from ._connection_model import HTTPLimit, HTTPTimeouts
+
 
 class Model(BaseModel):
     name: str = ""
@@ -11,4 +13,5 @@ class Model(BaseModel):
     parent: str = ""
     parent_id: str = ""
     detailed: ModelAPIData = Field(default_factory=ModelAPIData)
-    timeout: float = 600.0
+    limit: HTTPLimit | None = None
+    timeout: int | float | HTTPTimeouts | None = None
