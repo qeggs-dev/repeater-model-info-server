@@ -20,6 +20,7 @@
     "server": {
         "host": "", // 服务器绑定的主机
         "port": "", // 服务器绑定的端口
+        "api_key_env": "API_KEY", // API_KEY 环境变量名
         "workers": null, // 服务器使用的进程数
         "reload": null, // 服务器是否在代码更改时自动重启
         "run_server": true // 是否运行服务器
