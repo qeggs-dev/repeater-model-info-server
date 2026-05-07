@@ -4,7 +4,7 @@ from fastapi.security import APIKeyHeader
 from environs import Env
 _env = Env()
 
-api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+api_key_header = APIKeyHeader(name="Authorization", auto_error=False)
 
 async def verify_api_key(api_key: str | None = Depends(api_key_header)):
     valid_key = _env.str("API_KEY")
@@ -16,7 +16,7 @@ async def verify_api_key(api_key: str | None = Depends(api_key_header)):
                 "message": "API key is missing"
             }
         )
-    elif api_key != valid_key:
+    elif api_key != f"Bearer {valid_key}":
         return JSONResponse(
             status_code=401,
             content={
