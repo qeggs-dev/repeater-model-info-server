@@ -10,6 +10,7 @@ from ..model_api import ProviderGroup
 from ..global_config_manager import ConfigManager, Global_Config
 from .._info import __version__
 from ..logger_init import logger_init
+from ..api_key import APIKey
 from ._lifespan import Lifespan
 from environs import Env
 
@@ -23,6 +24,7 @@ class Server:
     envs: ClassVar[Env] = Env()
     core: ClassVar[ProviderGroup | None] = None
     server: ClassVar[uvicorn.Server | None] = None
+    api_key_manager: ClassVar[APIKey | None] = None
     
     @classmethod
     def include_router(cls, router: APIRouter):
@@ -80,6 +82,13 @@ class Server:
         cls.server = server
     
     @classmethod
+    def init_api_key(cls):
+        config = ConfigManager.get_configs()
+        cls.api_key = APIKey(
+            api_key_env = config.server.api_key_env,
+        )
+    
+    @classmethod
     async def run_server(cls):
         try:
             await cls.server.serve()
@@ -99,5 +108,6 @@ class Server:
         cls.read_dotenv()
         cls.init_config()
         cls.init_logger()
+        cls.init_api_key()
         cls.init_core()
         cls.init_server()
