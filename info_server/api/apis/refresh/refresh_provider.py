@@ -1,7 +1,8 @@
 from ..._server import Server
+from .._route import router
 from fastapi.responses import JSONResponse
 
-@Server.app.post("/refresh/{provider_id}")
+@router.post("/refresh/{provider_id}")
 async def refresh_provider(provider_id: str):
     """
     Refresh all model info from providers

@@ -1,5 +1,6 @@
 import asyncio
 from ..._server import Server
+from .._route import router
 from pydantic import BaseModel, Field
 from fastapi import Query
 from fastapi.responses import JSONResponse
@@ -9,7 +10,7 @@ class ModelInfoResponse(BaseModel):
     message: str = ""
     models: list[Model] = Field(default_factory=list)
 
-@Server.app.get("/models")
+@router.get("/models")
 async def get_all_models(json_schema: str | None = Query(None), regex: str | None = Query(None)):
     """
     Get all model info
