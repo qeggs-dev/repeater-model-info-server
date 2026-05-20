@@ -1,6 +1,7 @@
 import os
 import yaml
 import orjson
+import asyncio
 import uvicorn
 
 from pathlib import Path
@@ -92,7 +93,9 @@ class Server:
         try:
             async with Lifespan(cls.app):
                 await cls.server.serve()
-        except KeyboardInterrupt:
+        except asyncio.CancelledError:
+            pass
+        finally:
             await cls.shutdown_server()
 
     @classmethod
