@@ -132,7 +132,7 @@ class ProviderGroup:
                     code = e.response.status_code,
                     message = e.response.text
                 )
-            except httpx.ConnectError as e:
+            except httpx.RequestError as e:
                 logger.warning(
                     "{provider_name} failed to refresh model info ({message})",
                     provider_name = provider.name,
