@@ -18,8 +18,7 @@ class Server:
     app: ClassVar[FastAPI] = FastAPI(
         title="Repeater Model API Info Server",
         description="Used to provide model information to the Repeater.",
-        version = __version__,
-        lifespan = Lifespan
+        version = __version__
     )
     envs: ClassVar[Env] = Env()
     core: ClassVar[ProviderGroup | None] = None
@@ -91,7 +90,8 @@ class Server:
     @classmethod
     async def run_server(cls):
         try:
-            await cls.server.serve()
+            async with Lifespan(cls.app):
+                await cls.server.serve()
         except KeyboardInterrupt:
             await cls.shutdown_server()
 

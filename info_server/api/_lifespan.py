@@ -12,7 +12,11 @@ class Lifespan:
         await ExitHandler.execute()
     
     async def __aenter__(self):
-        return await self.enter_lifespan()
+        try:
+            return await self.enter_lifespan()
+        except:
+            await self.exit_lifespan()
+            raise
     
     async def __aexit__(self, exc_type, exc_value, traceback):
         return await self.exit_lifespan()
