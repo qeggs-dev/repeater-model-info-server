@@ -10,7 +10,9 @@
       "name": "OpenAI API Group", // 模型组名称
       "id": "openai", // 模型组 ID，用于查询与唯一标识
       "api_key_env": "OPENAI_API_KEY", // 模型API密钥环境变量的名称，你也可以在这里填写列表以支持多个密钥随机访问
-      "url": "https://api.openai.com/v1",
+      "base_url": "https://api.openai.com", // API 的基础 URL
+      "endpoint": "/v1", // API 的基础路径
+      "fetch_models_endpoint": "/models", // 获取模型列表的 API 路径
       "limit": { // 限制，包含以下字段
         "max_connections": 100, // 最大连接数
         "max_keepalive_connections": 20, // 最大保持连接数
