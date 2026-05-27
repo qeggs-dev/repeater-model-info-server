@@ -178,8 +178,8 @@ class ModelProvider:
     def from_config(cls, config: ProviderConfig, client: httpx.AsyncClient | None = None) -> "ModelProvider":
         return cls(
             base_url = config.base_url,
-            url = config.endpoint,
-            fetch_models_url = config.fetch_models_endpoint,
+            endpoint = config.endpoint,
+            fetch_models_endpoint = config.fetch_models_endpoint,
             proxy = config.proxy,
             limit = config.limit,
             timeout = config.timeout,
@@ -195,7 +195,6 @@ class ModelProvider:
             base_url = self.base_url,
             endpoint = self.endpoint,
             fetch_models_endpoint = self.fetch_models_endpoint,
-            timeout = self.timeout,
             proxy = self.proxy,
             limit = self.limit,
             timeout = self.timeout,
