@@ -5,8 +5,8 @@ from ._connection_model import HTTPLimit, HTTPTimeouts
 
 class ProviderConfig(BaseModel):
     base_url: str = ""
-    url: str = ""
-    fetch_models_url: str | None = None
+    endpoint: str = ""
+    fetch_models_endpoint: str | None = None
     limit: HTTPLimit | None = None
     timeout: int | float | HTTPTimeouts | None = 600.0
     proxy: str | None = None

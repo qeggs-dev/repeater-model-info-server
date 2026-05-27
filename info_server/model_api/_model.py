@@ -7,7 +7,7 @@ class Model(BaseModel):
     name: str = ""
     base_url: str = ""
     url: str = ""
-    fetch_models_url: str | None = None
+    fetch_models_endpoint: str | None = None
     proxy: str | None = None
     id: str = ""
     uid: str = ""

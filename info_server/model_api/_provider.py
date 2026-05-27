@@ -23,9 +23,9 @@ class ModelProvider:
         id: str,
         name: str,
         base_url: str,
-        url: str,
+        endpoint: str,
         api_key_env: str | list[str],
-        fetch_models_url: str | None = None,
+        fetch_models_endpoint: str | None = None,
         proxy: str | None = None,
         models: list[ModelAPIData] | None = None,
         limit: HTTPLimit | None = None,
@@ -35,8 +35,8 @@ class ModelProvider:
         self._id = id
         self._name = name
         self._base_url = base_url
-        self._url: str = url
-        self._fetch_models_url = fetch_models_url
+        self._endpoint: str = endpoint
+        self._fetch_models_endpoint = fetch_models_endpoint
         self._proxy = proxy
         self._limit = limit
         self._timeout = timeout
@@ -68,16 +68,16 @@ class ModelProvider:
         return self._name
 
     @property
-    def url(self) -> str:
-        return self._url
+    def endpoint(self) -> str:
+        return self._endpoint
 
     @property
     def base_url(self) -> str:
         return self._base_url
 
     @property
-    def fetch_models_url(self) -> str:
-        return self._fetch_models_url
+    def fetch_models_endpoint(self) -> str:
+        return self._fetch_models_endpoint
 
     @property
     def proxy(self) -> str | None:
@@ -128,9 +128,9 @@ class ModelProvider:
         }
     
     async def get_models(self) -> ModelAPIResponse:
-        url = urljoin(self.url, "/models")
-        if self.fetch_models_url is not None:
-            url = self.fetch_models_url
+        url = urljoin(self.endpoint, "/models")
+        if self.fetch_models_endpoint is not None:
+            url = self.fetch_models_endpoint
         response = await self._client.get(
             url,
             headers = self.headers
@@ -147,8 +147,8 @@ class ModelProvider:
         return Model(
             name = api_data.name or api_data.id,
             base_url = self.base_url,
-            url = self.url,
-            fetch_models_url = self.fetch_models_url,
+            url = self.endpoint,
+            fetch_models_endpoint = self.fetch_models_endpoint,
             proxy = self.proxy,
             id = api_data.id,
             uid = self.uid(api_data.id),
@@ -180,8 +180,8 @@ class ModelProvider:
     def from_config(cls, config: ProviderConfig, client: httpx.AsyncClient | None = None) -> "ModelProvider":
         return cls(
             base_url = config.base_url,
-            url = config.url,
-            fetch_models_url = config.fetch_models_url,
+            url = config.endpoint,
+            fetch_models_url = config.fetch_models_endpoint,
             proxy = config.proxy,
             limit = config.limit,
             timeout = config.timeout,
@@ -195,8 +195,8 @@ class ModelProvider:
     def to_config(self) -> ProviderConfig:
         return ProviderConfig(
             base_url = self.base_url,
-            url = self.url,
-            fetch_models_url = self.fetch_models_url,
+            endpoint = self.endpoint,
+            fetch_models_endpoint = self.fetch_models_endpoint,
             timeout = self.timeout,
             proxy = self.proxy,
             limit = self.limit,
