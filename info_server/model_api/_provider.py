@@ -2,6 +2,7 @@ import ssl
 import httpx
 import random
 
+from urllib.parse import urljoin
 from environs import Env
 from typing import Callable
 from .models import ModelAPIData, ModelAPIResponse
@@ -22,7 +23,9 @@ class ModelProvider:
         id: str,
         name: str,
         base_url: str,
+        url: str,
         api_key_env: str | list[str],
+        fetch_models_url: str | None = None,
         proxy: str | None = None,
         models: list[ModelAPIData] | None = None,
         limit: HTTPLimit | None = None,
@@ -32,6 +35,8 @@ class ModelProvider:
         self._id = id
         self._name = name
         self._base_url = base_url
+        self._url: str = url
+        self._fetch_models_url = fetch_models_url
         self._proxy = proxy
         self._limit = limit
         self._timeout = timeout
@@ -63,8 +68,16 @@ class ModelProvider:
         return self._name
 
     @property
+    def url(self) -> str:
+        return self._url
+
+    @property
     def base_url(self) -> str:
         return self._base_url
+
+    @property
+    def fetch_models_url(self) -> str:
+        return self._fetch_models_url
 
     @property
     def proxy(self) -> str | None:
@@ -115,8 +128,11 @@ class ModelProvider:
         }
     
     async def get_models(self) -> ModelAPIResponse:
+        url = urljoin(self.url, "/models")
+        if self.fetch_models_url is not None:
+            url = self.fetch_models_url
         response = await self._client.get(
-            "/models",
+            url,
             headers = self.headers
         )
         response.raise_for_status()
@@ -130,7 +146,9 @@ class ModelProvider:
     def _api_data_to_model(self, api_data: ModelAPIData) -> Model:
         return Model(
             name = api_data.name or api_data.id,
-            url = self.base_url,
+            base_url = self.base_url,
+            url = self.url,
+            fetch_models_url = self.fetch_models_url,
             proxy = self.proxy,
             id = api_data.id,
             uid = self.uid(api_data.id),
@@ -161,11 +179,12 @@ class ModelProvider:
     @classmethod
     def from_config(cls, config: ProviderConfig, client: httpx.AsyncClient | None = None) -> "ModelProvider":
         return cls(
-            base_url = config.url,
+            base_url = config.base_url,
+            url = config.url,
+            fetch_models_url = config.fetch_models_url,
             proxy = config.proxy,
             limit = config.limit,
             timeout = config.timeout,
-
             name = config.name,
             id = config.id,
             api_key_env = config.api_key_env,
@@ -175,11 +194,13 @@ class ModelProvider:
     
     def to_config(self) -> ProviderConfig:
         return ProviderConfig(
-            url = self.base_url,
+            base_url = self.base_url,
+            url = self.url,
+            fetch_models_url = self.fetch_models_url,
+            timeout = self.timeout,
             proxy = self.proxy,
             limit = self.limit,
             timeout = self.timeout,
-
             name = self.name,
             id = self.id,
             api_key_env = self.api_key_env,
