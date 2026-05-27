@@ -128,9 +128,7 @@ class ModelProvider:
         }
     
     async def get_models(self) -> ModelAPIResponse:
-        url = urljoin(self.endpoint, "/models")
-        if self.fetch_models_endpoint is not None:
-            url = self.fetch_models_endpoint
+        url = self.fetch_models_endpoint
         response = await self._client.get(
             url,
             headers = self.headers
