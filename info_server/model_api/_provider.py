@@ -147,7 +147,7 @@ class ModelProvider:
         return Model(
             name = api_data.name or api_data.id,
             base_url = self.base_url,
-            url = self.endpoint,
+            endpoint = self.endpoint,
             fetch_models_endpoint = self.fetch_models_endpoint,
             proxy = self.proxy,
             id = api_data.id,
