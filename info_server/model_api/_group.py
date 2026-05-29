@@ -19,6 +19,7 @@ from ..lifespan import (
 class ProviderGroup:
     _model_uid_pattern: re.Pattern[str] = re.compile(r"^(?P<group>.*?)/(?P<model>.*)$", re.IGNORECASE | re.DOTALL)
     _rematch_pattern: re.Pattern[str] = re.compile(r"^(?P<mode>match|search):(?P<regex>.+)$", re.IGNORECASE | re.DOTALL)
+    _schema_pattern: re.Pattern[str] = re.compile(r"^(?P<mode>schema):(?P<schema>.+)$", re.IGNORECASE | re.DOTALL)
     def __init__(self, groups: GroupConfig):
         self._providers: dict[str, ModelProvider] = {provider.id: ModelProvider.from_config(provider) for provider in groups.providers}
         self._groups: GroupConfig = groups
@@ -67,12 +68,22 @@ class ProviderGroup:
                             assert False, f"Unknown mode {mode}"
                     return models
                 else:
-                    models: list[Model] = []
-                    for group in self._providers.values():
-                        model = group.find_model(model_id)
-                        if model is not None:
-                            models.append(model)
-                    return models
+                    match_result = self._schema_pattern.match(model_id)
+                    if match_result:
+                        schema = match_result.group("schema")
+                        models: list[Model] = self.schema_match_models(
+                            orjson.loads(
+                                schema
+                            )
+                        )
+                        return models
+                    else:
+                        models: list[Model] = []
+                        for group in self._providers.values():
+                            model = group.find_model(model_id)
+                            if model is not None:
+                                models.append(model)
+                        return models
     
     def regex_match_models(self, matcher: Callable[[str], bool]) -> list[Model]:
         models: list[Model] = []
