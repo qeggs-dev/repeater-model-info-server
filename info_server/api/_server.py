@@ -90,13 +90,13 @@ class Server:
     
     @classmethod
     async def run_server(cls):
-        try:
-            async with Lifespan(cls.app):
+        async with Lifespan(cls.app):
+            try:
                 await cls.server.serve()
-        except asyncio.CancelledError:
-            pass
-        finally:
-            await cls.shutdown_server()
+            except asyncio.CancelledError:
+                pass
+            finally:
+                await cls.shutdown_server()
 
     @classmethod
     async def shutdown_server(cls):
