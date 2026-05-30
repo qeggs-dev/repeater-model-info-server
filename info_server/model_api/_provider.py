@@ -137,7 +137,7 @@ class ModelProvider:
         response.raise_for_status()
         data = response.json()
         try:
-            return ModelAPIResponse(data)
+            return ModelAPIResponse(**data)
         except ValidationError as e:
             raise ValueError(f"Invalid response from {self.base_url}{url}: {e}")
     
