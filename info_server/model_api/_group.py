@@ -9,6 +9,7 @@ import jsonschema
 from loguru import logger
 from pathlib import Path
 from typing import Any, Generator, Callable
+from pydantic import ValidationError
 from ._configs_model import GroupConfig, ProviderConfig
 from ._model import Model
 from ._provider import ModelProvider
@@ -148,6 +149,17 @@ class ProviderGroup:
                 "{provider_name} failed to refresh model info ({message})",
                 provider_name = provider.name,
                 message = str(e)
+            )
+        except ValidationError as e:
+            logger.warning(
+                "{provider_name} failed to refresh model info ({message})",
+                provider_name = provider.name,
+                message = str(e)
+            )
+        except Exception as e:
+            logger.exception(
+                "{provider_name} failed to refresh model info",
+                provider_name = provider.name
             )
     
     async def get_and_populates(self):
