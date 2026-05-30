@@ -2,11 +2,9 @@ import ssl
 import httpx
 import random
 
-from urllib.parse import urljoin
 from environs import Env
 from typing import Callable
 from .models import ModelAPIData, ModelAPIResponse
-from pydantic import ValidationError
 from ._configs_model import (
     ProviderConfig,
     HTTPLimit,
@@ -136,10 +134,7 @@ class ModelProvider:
         )
         response.raise_for_status()
         data = response.json()
-        try:
-            return ModelAPIResponse(**data)
-        except ValidationError as e:
-            raise ValueError(f"Invalid response from {self.base_url}{url}: {e}")
+        return ModelAPIResponse(**data)
     
     async def get_and_populates(self):
         response = await self.get_models()
