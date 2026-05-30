@@ -2,6 +2,7 @@ import os
 import re
 import httpx
 import orjson
+import asyncio
 import aiofiles
 import jsonschema
 
@@ -132,24 +133,31 @@ class ProviderGroup:
         config = GroupConfig(**data)
         return cls(config)
     
+    async def _get_and_populates(self, provider: ModelProvider):
+        try:
+            await provider.get_and_populates()
+        except httpx.HTTPStatusError as e:
+            logger.warning(
+                "{provider_name} failed to refresh model info ({code}): {message}",
+                provider_name = provider.name,
+                code = e.response.status_code,
+                message = e.response.text
+            )
+        except httpx.RequestError as e:
+            logger.warning(
+                "{provider_name} failed to refresh model info ({message})",
+                provider_name = provider.name,
+                message = str(e)
+            )
+    
     async def get_and_populates(self):
+        tasks: set[asyncio.Task] = set()
         for provider in self._providers.values():
-            try:
-                await provider.get_and_populates()
-            except httpx.HTTPStatusError as e:
-                logger.warning(
-                    "{provider_name} failed to refresh model info ({code}): {message}",
-                    provider_name = provider.name,
-                    code = e.response.status_code,
-                    message = e.response.text
-                )
-            except httpx.RequestError as e:
-                logger.warning(
-                    "{provider_name} failed to refresh model info ({message})",
-                    provider_name = provider.name,
-                    message = str(e)
-                )
-                continue
+            task = asyncio.create_task(
+                self._get_and_populates(provider)
+            )
+            tasks.add(task)
+        await asyncio.gather(*tasks)
     
     async def init_library_file(self, file: str | os.PathLike | None = None):
         if file is not None and Path(file).exists():
