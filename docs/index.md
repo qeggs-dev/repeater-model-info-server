@@ -14,3 +14,8 @@
 
 用于描述模型信息
 详情请查看 [Model Info Object](./model_info_object.md)
+
+## Query expression
+
+用于描述查询条件
+详情请查看 [Query expression](./query_expression.md)
