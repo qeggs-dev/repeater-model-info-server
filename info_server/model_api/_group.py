@@ -22,9 +22,14 @@ class ProviderGroup:
     _model_uid_pattern: re.Pattern[str] = re.compile(r"^(?P<group>.*?)/(?P<model>.*)$", re.IGNORECASE | re.DOTALL)
     _rematch_pattern: re.Pattern[str] = re.compile(r"^(?P<mode>match|search):(?P<regex>.+)$", re.IGNORECASE | re.DOTALL)
     _schema_pattern: re.Pattern[str] = re.compile(r"^(?P<mode>schema):(?P<schema>.+)$", re.IGNORECASE | re.DOTALL)
-    def __init__(self, groups: GroupConfig):
+    def __init__(
+            self,
+            groups: GroupConfig,
+            allow_schema_expansion: bool = False,
+        ):
         self._providers: dict[str, ModelProvider] = {provider.id: ModelProvider.from_config(provider) for provider in groups.providers}
         self._groups: GroupConfig = groups
+        self._allow_schema_expansion: bool = allow_schema_expansion
         StartHandler.add_function(self.init_library_file(groups.library_file))
         ExitHandler.add_function(self.close_all())
     
@@ -73,11 +78,14 @@ class ProviderGroup:
                     match_result = self._schema_pattern.match(model_id)
                     if match_result:
                         schema = match_result.group("schema")
-                        models: list[Model] = self.schema_match_models(
-                            orjson.loads(
-                                schema
+                        if self._allow_schema_expansion:
+                            models: list[Model] = self.schema_match_models(
+                                orjson.loads(
+                                    schema
+                                )
                             )
-                        )
+                        else:
+                            models: list[Model] = []
                         return models
                     else:
                         models: list[Model] = []
@@ -119,20 +127,26 @@ class ProviderGroup:
         return models
     
     @classmethod
-    def from_file(cls, path: str | os.PathLike) -> "ProviderGroup":
+    def from_file(cls, path: str | os.PathLike, allow_schema_expansion: bool = False) -> "ProviderGroup":
         with open(path, "rb") as f:
             file_content = f.read()
             data = orjson.loads(file_content)
             config = GroupConfig(**data)
-            return cls(config)
+            return cls(
+                config,
+                allow_schema_expansion = allow_schema_expansion
+            )
     
     @classmethod
-    async def from_file_async(cls, path: str | os.PathLike) -> "ProviderGroup":
+    async def from_file_async(cls, path: str | os.PathLike, allow_schema_expansion: bool = False) -> "ProviderGroup":
         async with aiofiles.open(path, "rb") as f:
             file_content = await f.read()
         data = orjson.loads(file_content)
         config = GroupConfig(**data)
-        return cls(config)
+        return cls(
+            config,
+            allow_schema_expansion = allow_schema_expansion
+        )
     
     async def _get_and_populates(self, provider: ModelProvider):
         try:
