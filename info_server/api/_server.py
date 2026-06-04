@@ -63,7 +63,10 @@ class Server:
     
     @classmethod
     def init_core(cls):
-        cls.core = ProviderGroup.from_file(ConfigManager.get_configs().model_api.api_file_path)
+        cls.core = ProviderGroup.from_file(
+            ConfigManager.get_configs().model_api.api_file_path,
+            allow_schema_expansion = ConfigManager.get_configs().model_api.allow_schema_expansion,
+        )
     
     @classmethod
     def init_server(cls):
