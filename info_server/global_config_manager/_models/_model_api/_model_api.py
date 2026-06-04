@@ -5,3 +5,4 @@ class ModelAPIConfig(BaseModel):
     
     api_file_path: str = "./configs/api_info.json"
     default_timeout: float = 600.0
+    allow_schema_expansion: bool = False
