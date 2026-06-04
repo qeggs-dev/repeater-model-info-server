@@ -1,3 +1,4 @@
+import asyncio
 from ..._server import Server
 from .._route import router
 from jsonschema import SchemaError
@@ -15,7 +16,7 @@ async def get_model_info(model_uid: str):
     Get model info
     """
     try:
-        models = Server.core.find_models(model_uid)
+        models = await asyncio.to_thread(Server.core.find_models, model_uid)
     except SchemaError as e:
         return JSONResponse(
             content = ModelInfoResponse(
