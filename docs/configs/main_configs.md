@@ -15,7 +15,8 @@
     },
     "model_api": {
         "api_file_path": "./configs/api_info.json", // 模型信息引导文件路径
-        "default_timeout": 600.0 // 在模型没有定义超时时间时使用的超时时间
+        "default_timeout": 600.0, // 在模型没有定义超时时间时使用的超时时间
+        "allow_schema_expansion": false // 是否允许在表达式中使用 json schema 进行模型匹配
     },
     "server": {
         "host": "", // 服务器绑定的主机
