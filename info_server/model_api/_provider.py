@@ -23,7 +23,7 @@ class ModelProvider:
         name: str,
         base_url: str,
         endpoint: str,
-        api_key_env: str | list[str],
+        api_key_env: str | dict[str, float],
         fetch_models_endpoint: str | None = None,
         proxy: str | None = None,
         models: list[ModelAPIData] | None = None,
@@ -95,7 +95,7 @@ class ModelProvider:
         return self._timeout
     
     @property
-    def api_key_env(self) -> str | list[str]:
+    def api_key_env(self) -> str | dict[str, float]:
         return self._api_key_env
     
     @property
@@ -103,27 +103,20 @@ class ModelProvider:
         return self._client
     
     @property
-    def api_keys(self) -> str | list[str | None] | None:
+    def api_keys(self) -> str | None:
         if isinstance(self.api_key_env, str):
             return self._env.str(self.api_key_env, None)
-        elif isinstance(self.api_key_env, list):
-            return [self._env.str(api_key_env, None) for api_key_env in self.api_key_env]
-        else:
-            return None
-    
-    @property
-    def random_api_key(self) -> str | None:
-        if isinstance(self.api_key_env, str):
-            return self.api_keys
-        elif isinstance(self.api_key_env, list):
-            return random.choice(self.api_keys)
+        elif isinstance(self.api_key_env, dict):
+            items = list(self.api_key_env.keys())
+            weights = list(self.api_key_env.values())
+            return random.choices(items, weights=weights, k=1)[0]
         else:
             return None
     
     @property
     def headers(self) -> dict:
         return {
-            "Authorization": f"Bearer {self.random_api_key}"
+            "Authorization": f"Bearer {self.api_keys}"
         }
     
     async def get_models(self) -> ModelAPIResponse:
@@ -150,7 +143,7 @@ class ModelProvider:
             proxy = self.proxy,
             id = api_data.id,
             uid = self.uid(api_data.id),
-            api_key = self.random_api_key,
+            api_key = self.api_keys,
             parent_id = self.id,
             detailed = api_data,
             parent = self.name,

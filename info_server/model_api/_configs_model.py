@@ -13,7 +13,7 @@ class ProviderConfig(BaseModel):
 
     name: str = ""
     id: str = ""
-    api_key_env: str | list[str] = "API_KEY"
+    api_key_env: str | dict[str, float] = "API_KEY"
     models: list[ModelAPIData] | None = None
     
 class GroupConfig(BaseModel):
