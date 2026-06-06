@@ -176,7 +176,9 @@ class ModelProvider:
         now = time.time_ns()
         if model_id in self._models:
             model_info = self._models[model_id]
-            if model_info.disable_to < now:
+            if model_info.disable_to is None:
+                return self._api_data_to_model(model_info)
+            elif model_info.disable_to < now:
                 return self._api_data_to_model(model_info)
             else:
                 return None
