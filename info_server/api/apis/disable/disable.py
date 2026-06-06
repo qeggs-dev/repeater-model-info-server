@@ -1,6 +1,7 @@
 import asyncio
 from ..._server import Server
 from .._route import router
+from jsonschema import SchemaError
 from pydantic import BaseModel, Field
 from fastapi.responses import JSONResponse
 from ....model_api import Model
@@ -11,27 +12,32 @@ class ModelInfoResponse(BaseModel):
     message: str = ""
     models: list[Model] = Field(default_factory=list)
 
-@router.post("/disable/{provider_id}/{model_id}")
-async def disable_models(provider_id: str, model_id: str, request: DisableRequest):
+@router.post("/disable/{model_id:path}")
+async def disable_models(model_id: str, request: DisableRequest):
     """
     Disables a model from the server
     """
-    provider = Server.core.providers.get(provider_id)
-    success = provider.disable(model_id, request.timeout)
-
-    if not success:
+    try:
+        models = await asyncio.to_thread(Server.core.find_models, model_id)
+    except SchemaError as e:
         return JSONResponse(
-            content = DisableResponse(
-                message = f"Failed to disable model {provider_id}/{model_id}.",
-                success = False
-            ).model_dump(),
+            content = ModelInfoResponse(
+                message = str(e),
+            ).model_dump(exclude_none=True),
             status_code=400,
         )
-    else:
-        return JSONResponse(
-            content = DisableResponse(
-                message = f"Successfully disabled model {provider_id}/{model_id}.",
-                success = True
-            ).model_dump(),
-            status_code=200,
-        )
+    
+    success_count = 0
+    total_count = len(models)
+    for model in models:
+        if model.detailed.disable(timeout = request.timeout):
+            success_count += 1
+
+    return JSONResponse(
+        content = DisableResponse(
+            message = f"Disabled {success_count} models out of {total_count}",
+            success = success_count,
+            total = total_count,
+        ).model_dump(),
+        status_code=200,
+    )
