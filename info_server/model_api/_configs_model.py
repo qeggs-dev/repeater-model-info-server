@@ -10,6 +10,7 @@ class ProviderConfig(BaseModel):
     limit: HTTPLimit | None = None
     timeout: int | float | HTTPTimeouts | None = 600.0
     proxy: str | None = None
+    disable_to: int | None = None
 
     name: str = ""
     id: str = ""

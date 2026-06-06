@@ -1,9 +1,10 @@
 import ssl
+import time
 import httpx
 import random
 
 from environs import Env
-from typing import Callable
+from typing import Callable, Generator
 from .models import ModelAPIData, ModelAPIResponse
 from ._configs_model import (
     ProviderConfig,
@@ -35,7 +36,7 @@ class ModelProvider:
         self._name = name
         self._base_url = base_url
         self._endpoint: str = endpoint
-        self._fetch_models_endpoint = fetch_models_endpoint
+        self._fetch_models_endpoint = fetch_models_endpoint or "/models"
         self._proxy = proxy
         self._limit = limit
         self._timeout = timeout
@@ -84,7 +85,16 @@ class ModelProvider:
     
     @property
     def models(self) -> list[ModelAPIData]:
-        return list(self._models.values())
+        now = time.time_ns()
+        return list(self.models_gen(now))
+        
+    def models_gen(self, now: int) -> Generator[ModelAPIData, None, None]:
+        for model in self._models.values():
+            if model.disable_to is None:
+                yield model
+            elif model.disable_to < now:
+                model.disable_to = None
+                yield model
     
     @property
     def limit(self) -> HTTPLimit | None:
@@ -119,6 +129,18 @@ class ModelProvider:
             "Authorization": f"Bearer {self.api_keys}"
         }
     
+    def disable(self, model_id: str, timeout: int):
+        try:
+            self._models[model_id].disable(timeout)
+            return True
+        except KeyError:
+            logger.warning(
+                "Model {model_id} not found in provider {provider_id}",
+                model_id = model_id,
+                provider_id = self.id
+            )
+            return False
+    
     async def get_models(self) -> ModelAPIResponse:
         url = self.fetch_models_endpoint
         response = await self._client.get(
@@ -151,21 +173,26 @@ class ModelProvider:
         )
     
     def find_model(self, model_id: str) -> Model | None:
+        now = time.time_ns()
         if model_id in self._models:
             model_info = self._models[model_id]
-            return self._api_data_to_model(model_info)
+            if model_info.disable_to < now:
+                return self._api_data_to_model(model_info)
+            else:
+                return None
         else:
             return None
     
     def match_models(self, matcher: Callable[[str], bool], get_key: Callable[[str], str] = lambda x: x) -> list[Model]:
+        now = time.time_ns()
         return [
             self._api_data_to_model(model_info)
-            for model_info in self._models.values()
+            for model_info in self.models_gen(now)
             if matcher(get_key(model_info.id))
         ]
     
     def get_all_models(self) -> list[Model]:
-        return [self._api_data_to_model(model_info) for model_info in self._models.values()]
+        return [self._api_data_to_model(model_info) for model_info in self.models]
     
     @classmethod
     def from_config(cls, config: ProviderConfig, client: httpx.AsyncClient | None = None) -> "ModelProvider":

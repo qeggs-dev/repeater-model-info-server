@@ -31,7 +31,7 @@ class ProviderGroup:
         self._groups: GroupConfig = groups
         self._allow_schema_match: bool = allow_schema_match
         StartHandler.add_function(self.init_library_file(groups.library_file))
-        ExitHandler.add_function(self.close_all())
+        ExitHandler.add_function(self.close_and_save())
     
     @property
     def groups(self) -> GroupConfig:
@@ -229,11 +229,24 @@ class ProviderGroup:
             providers[provider.id] = provider
         self._providers = providers
     
-    async def to_providers_library(self, file: str | os.PathLike):
+    async def to_providers_library(self, file: str | os.PathLike | None = None):
+        if file is None:
+            if self._groups.library_file is None:
+                logger.warning(
+                    "No library file specified, skipping saving"
+                )
+                return
+            else:
+                file = self._groups.library_file
+        
         data = [provider.to_config().model_dump(exclude_none=True) for provider in self.all_providers()]
         file_content = orjson.dumps(data)
         async with aiofiles.open(file, "wb") as f:
             await f.write(file_content)
+        logger.info(
+            "Saved providers library to {file}",
+            file = file
+        )
     
     def all_providers(self) -> list[ModelProvider]:
         return list(self._providers.values())
@@ -252,6 +265,8 @@ class ProviderGroup:
         else:
             raise ValueError(f"Provider {provider_id} not found")
     
-    async def close_all(self):
+    async def close_and_save(self):
         for provider in self._providers.values():
             await provider.close()
+        
+        await self.to_providers_library()
