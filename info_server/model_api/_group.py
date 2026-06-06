@@ -114,20 +114,23 @@ class ProviderGroup:
                 )
             )
         return models
+    
+    @staticmethod
+    def _matcher(schema: jsonschema.Draft7Validator, models: list[Model]) -> Generator[Model, None, None]:
+        for model in models:
+            data = model.model_dump()
+            try:
+                schema.validate(data)
+                yield model
+            except jsonschema.ValidationError:
+                continue
 
     def schema_match_models(self, schema: Any) -> list[Model]:
+        validater = jsonschema.Draft7Validator(schema)
         if self._allow_schema_match:
             models = self.get_all_models()
-            def matcher(models: list[Model]) -> Generator[Model, None, None]:
-                for model in models:
-                    data = model.model_dump()
-                    try:
-                        jsonschema.validate(data, schema)
-                        yield model
-                    except jsonschema.ValidationError:
-                        continue
             matched_models: list[Model] = []
-            matched_models.extend(matcher(models))
+            matched_models.extend(self._matcher(validater, models))
             return matched_models
         else:
             return []
