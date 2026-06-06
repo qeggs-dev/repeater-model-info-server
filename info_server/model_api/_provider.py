@@ -179,6 +179,7 @@ class ModelProvider:
             if model_info.disable_to is None:
                 return self._api_data_to_model(model_info)
             elif model_info.disable_to < now:
+                model_info.disable_to = None
                 return self._api_data_to_model(model_info)
             else:
                 return None
