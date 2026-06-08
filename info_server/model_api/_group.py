@@ -7,6 +7,7 @@ import aiofiles
 import jsonschema
 
 from loguru import logger
+from rapidfuzz import process
 from pathlib import Path
 from typing import Any, Generator, Callable
 from pydantic import ValidationError
@@ -22,14 +23,17 @@ class ProviderGroup:
     _model_uid_pattern: re.Pattern[str] = re.compile(r"^(?P<group>.*?)/(?P<model>.*)$", re.IGNORECASE | re.DOTALL)
     _rematch_pattern: re.Pattern[str] = re.compile(r"^(?P<mode>match|search):(?P<regex>.+)$", re.IGNORECASE | re.DOTALL)
     _schema_pattern: re.Pattern[str] = re.compile(r"^(?P<mode>schema):(?P<schema>.+)$", re.IGNORECASE | re.DOTALL)
+    _fuzz_pattern: re.Pattern[str] = re.compile(r"^(?P<mode>fuzzy):(?P<model_uid>.+):(?P<match_limit>\d+?)$", re.IGNORECASE | re.DOTALL)
     def __init__(
             self,
             groups: GroupConfig,
             allow_schema_match: bool = False,
+            default_fuzzy_match_limit: int = 32,
         ):
         self._providers: dict[str, ModelProvider] = {provider.id: ModelProvider.from_config(provider) for provider in groups.providers}
         self._groups: GroupConfig = groups
         self._allow_schema_match: bool = allow_schema_match
+        self._default_fuzzy_match_limit: int = default_fuzzy_match_limit
         StartHandler.add_function(self.init_library_file(groups.library_file))
         ExitHandler.add_function(self.close_and_save())
     
@@ -38,71 +42,126 @@ class ProviderGroup:
         return self._groups
 
     @property
-    def providers(self) -> dict[str, ModelProvider]:
-        return self._providers
+    def providers(self) -> list[ModelProvider]:
+        return list(self._providers.values())
     
     @property
     def allow_schema_match(self) -> bool:
         return self._allow_schema_match
     
+    @property
+    def model_uids(self) -> list[str]:
+        uids: list[str] = list()
+        for provider in self._providers.values():
+            uids.extend(provider.uids)
+        return uids
+    
+    @property
+    def model_uid_tuples(self) -> list[tuple[str, str]]:
+        uids: list[tuple[str, str]] = list()
+        for provider in self._providers.values():
+            uids.extend(provider.uid_tuples)
+        return uids
+    
     def find_models(self, model_id: str) -> list[Model]:
         if model_id in self._providers:
             provider = self._providers[model_id]
-            return provider.get_all_models()
+            matched_models = provider.get_all_models()
+            if matched_models:
+                return matched_models
+        
+        all_this_models = self.all_this_models(model_id)
+        if all_this_models:
+            return all_this_models
+        
+        match_result = self._model_uid_pattern.match(model_id)
+        if match_result:
+            group_name = match_result.group("group")
+            model_name = match_result.group("model")
+
+            assert isinstance(group_name, str), f"Group name should be a string, but got {type(group_name).__name__}"
+            assert isinstance(model_name, str), f"Model name should be a string, but got {type(model_name).__name__}"
+            matched_model = self.match_uid(group_name, model_name)
+            if matched_model:
+                return [matched_model]
+        
+        match_result = self._rematch_pattern.match(model_id)
+        if match_result:
+            mode = match_result.group("mode")
+            regex = match_result.group("regex")
+
+            assert isinstance(mode, str), f"Mode should be a string, but got {type(mode).__name__}"
+            assert isinstance(regex, str), f"Regex should be a string, but got {type(regex).__name__}"
+            matched_model = self.rematch_models(mode, regex)
+            if matched_model:
+                return matched_model
+    
+        match_result = self._schema_pattern.match(model_id)
+        if match_result:
+            schema = match_result.group("schema")
+            model: list[Model] = self.schema_match_models(
+                orjson.loads(
+                    schema
+                )
+            )
+            if model:
+                return model
+        
+        match_result = self._fuzz_pattern.match(model_id)
+        if match_result:
+            model_uid = match_result.group("model_uid")
+            match_limit = match_result.group("match_limit")
+
+            assert isinstance(model_uid, str), f"Model UID should be a string, got {type(model_uid)}"
+            assert isinstance(match_limit, str), f"Match limit should be a string, got {type(match_limit)}"
+
+            match_limit = int(match_limit)
         else:
-            match_result = self._model_uid_pattern.match(model_id)
-            if match_result:
-                group_name = match_result.group("group")
-                model_name = match_result.group("model")
+            model_uid = model_id
+            match_limit = self._default_fuzzy_match_limit
+        
+        return self.fuzzy_match_models(model_uid, match_limit)
+    
+    def get_model(self, provider_id: str, model_id: str) -> Model | None:
+        provider = self._providers.get(provider_id)
+        if provider is None:
+            return None
+        return provider.find_model(model_id)
+    
+    def match_uid(self, group_name: str, model_name: str) -> list[Model]:
+        group = self._providers.get(group_name)
+        if group is None:
+            logger.warning(f"Group {group_name} not found")
+            return []
+        
+        model = group.find_model(model_name)
+        if model is None:
+            logger.warning(f"Model {model_name} not found in group {group_name}")
+            return []
+        return [model]
 
-                assert isinstance(group_name, str), "Group name should be a string"
-                assert isinstance(model_name, str), "Model name should be a string"
-
-                group = self._providers.get(group_name)
-                if group is None:
-                    logger.warning(f"Group {group_name} not found")
-                    return []
-                
-                model = group.find_model(model_name)
-                if model is None:
-                    logger.warning(f"Model {model_name} not found in group {group_name}")
-                    return []
-                return [model]
-            else:
-                match_result = self._rematch_pattern.match(model_id)
-                if match_result:
-                    mode = match_result.group("mode")
-                    regex = match_result.group("regex")
-                    pattern = re.compile(regex)
-                    match mode:
-                        case "match":
-                            models: list[Model] = self.regex_match_models(
-                                lambda model_id: pattern.match(model_id) is not None
-                            )
-                        case "search":
-                            models: list[Model] = self.regex_match_models(
-                                lambda model_id: pattern.search(model_id) is not None
-                            )
-                        case _:
-                            assert False, f"Unknown mode {mode}"
-                    return models
-                else:
-                    match_result = self._schema_pattern.match(model_id)
-                    if match_result:
-                        schema = match_result.group("schema")
-                        models: list[Model] = self.schema_match_models(
-                            orjson.loads(
-                                schema
-                            )
-                        )
-                        return models
-                    else:
-                        models: list[Model] = []
-                        for group in self._providers.values():
-                            model = group.find_model(model_id)
-                            if model is not None:
-                                models.append(model)
-                        return models
+    def all_this_models(self, model_id: str) -> list[Model]:
+        list_of_models = []
+        for provider in self._providers.values():
+            model = provider.find_model(model_id)
+            if model is not None:
+                return list_of_models.append(model)
+        return list_of_models
+    
+    def rematch_models(self, mode: str, regex: str) -> list[Model]:
+        pattern = re.compile(regex)
+        match mode:
+            case "match":
+                model: list[Model] = self.regex_match_models(
+                    lambda model_id: pattern.match(model_id) is not None
+                )
+            case "search":
+                model: list[Model] = self.regex_match_models(
+                    lambda model_id: pattern.search(model_id) is not None
+                )
+            case _:
+                raise ValueError(f"Invalid mode: {mode}")
+        return model
     
     def regex_match_models(self, matcher: Callable[[str], bool]) -> list[Model]:
         models: list[Model] = []
@@ -113,6 +172,31 @@ class ProviderGroup:
                     get_key = lambda model_id: f"{provider.id}/{model_id}"
                 )
             )
+        return models
+    
+    def fuzzy_match_models(self, model_uid: str, limit: int = 32) -> list[Model]:
+        
+        model_uid_tuples = self.model_uid_tuples
+        
+        result = process.extract(
+            model_uid,
+            [f"{provider_uid}/{model_uid}" for provider_uid, model_uid in model_uid_tuples],
+            limit = limit,
+        )
+
+        models: list[Model] = []
+        for mathched, confidence, index in result:
+            matched_provider_id, matched_model_id = model_uid_tuples[index]
+            try:
+                provider = self._providers[matched_provider_id]
+            except KeyError:
+                continue
+
+            model = provider.find_model(matched_model_id)
+
+            if model is not None:
+                models.append(model)
+        
         return models
     
     @staticmethod
