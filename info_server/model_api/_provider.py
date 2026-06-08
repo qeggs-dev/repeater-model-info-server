@@ -64,6 +64,14 @@ class ModelProvider:
         return f"{self._id}/{model_id}"
     
     @property
+    def uids(self) -> list[str]:
+        return list(f"{self._id}/{model}" for model in self._models.keys())
+    
+    @property
+    def uid_tuples(self) -> list[tuple[str, str]]:
+        return list((self._id, model) for model in self._models.keys())
+    
+    @property
     def name(self) -> str:
         return self._name
 
