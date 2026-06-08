@@ -10,3 +10,7 @@
 4. `match:<regex>`: 返回所有 `3` 格式下满足正则表达式的模型
 5. `search:<regex>`: 返回所有 `3` 格式下满足正则表达式的模型，但是包含该模式而非全字匹配该模式
 6. `schema:<schema>`: 返回所有模型资料满足提交的 json schema 的模型
+7. `fuzzy:<model_uid>:<count>`: 模糊匹配指定 `model_uid` 的模型，返回 `count` 个结果
+
+当所有查询表达式无法匹配到时
+使用模糊匹配，返回 `default_fuzzy_match_limit` 个结果
