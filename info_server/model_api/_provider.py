@@ -65,11 +65,11 @@ class ModelProvider:
     
     @property
     def uids(self) -> list[str]:
-        return list(f"{self._id}/{model}" for model in self._models.keys())
+        return list(f"{self._id}/{model}" for model in self.models_key_gen())
     
     @property
     def uid_tuples(self) -> list[tuple[str, str]]:
-        return list((self._id, model) for model in self._models.keys())
+        return list((self._id, model) for model in self.models_key_gen())
     
     @property
     def name(self) -> str:
@@ -103,6 +103,14 @@ class ModelProvider:
             elif model.disable_to < now:
                 model.disable_to = None
                 yield model
+    
+    def models_key_gen(self, now: int) -> Generator[str, None, None]:
+        for key, model in self._models.items():
+            if model.disable_to is None:
+                yield key
+            elif model.disable_to < now:
+                model.disable_to = None
+                yield key
     
     @property
     def limit(self) -> HTTPLimit | None:
