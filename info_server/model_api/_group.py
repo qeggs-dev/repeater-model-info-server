@@ -229,25 +229,37 @@ class ProviderGroup:
         return models
     
     @classmethod
-    def from_file(cls, path: str | os.PathLike, allow_schema_match: bool = False) -> "ProviderGroup":
+    def from_file(
+        cls,
+        path: str | os.PathLike,
+        allow_schema_match: bool = False,
+        default_fuzzy_match_limit: int = 32,
+    ) -> "ProviderGroup":
         with open(path, "rb") as f:
             file_content = f.read()
             data = orjson.loads(file_content)
             config = GroupConfig(**data)
             return cls(
                 config,
-                allow_schema_match = allow_schema_match
+                allow_schema_match = allow_schema_match,
+                default_fuzzy_match_limit = default_fuzzy_match_limit,
             )
     
     @classmethod
-    async def from_file_async(cls, path: str | os.PathLike, allow_schema_match: bool = False) -> "ProviderGroup":
+    async def from_file_async(
+        cls,
+        path: str | os.PathLike,
+        allow_schema_match: bool = False,
+        default_fuzzy_match_limit: int = 32,
+     ) -> "ProviderGroup":
         async with aiofiles.open(path, "rb") as f:
             file_content = await f.read()
         data = orjson.loads(file_content)
         config = GroupConfig(**data)
         return cls(
             config,
-            allow_schema_match = allow_schema_match
+            allow_schema_match = allow_schema_match,
+            default_fuzzy_match_limit = default_fuzzy_match_limit,
         )
     
     async def _get_and_populates(self, provider: ModelProvider):
