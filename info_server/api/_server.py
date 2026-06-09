@@ -66,6 +66,7 @@ class Server:
         cls.core = ProviderGroup.from_file(
             ConfigManager.get_configs().model_api.api_file_path,
             allow_schema_match = ConfigManager.get_configs().model_api.allow_schema_match,
+            default_fuzzy_match_limit = ConfigManager.get_configs().model_api.default_fuzzy_match_limit,
         )
     
     @classmethod
