@@ -133,8 +133,13 @@ class ModelProvider:
         if isinstance(self.api_key_env, str):
             return self._env.str(self.api_key_env, None)
         elif isinstance(self.api_key_env, dict):
-            items = list(self.api_key_env.keys())
-            weights = list(self.api_key_env.values())
+            items: list[str] = []
+            weights: list[float] = []
+
+            # Make sure that each item has its own weight.
+            for key, weight in self.api_key_env.items():
+                items.append(key)
+                weights.append(weight)
             return random.choices(items, weights=weights, k=1)[0]
         else:
             return None
