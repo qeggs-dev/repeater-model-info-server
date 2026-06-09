@@ -175,6 +175,9 @@ class ProviderGroup:
         return models
     
     def fuzzy_match_models(self, model_uid: str, limit: int = 32) -> list[Model]:
+
+        if limit <= 0:
+            return []
         
         model_uid_tuples = self.model_uid_tuples
         
