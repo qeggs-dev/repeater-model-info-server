@@ -83,7 +83,7 @@ class ProviderGroup:
             assert isinstance(model_name, str), f"Model name should be a string, but got {type(model_name).__name__}"
             matched_model = self.match_uid(group_name, model_name)
             if matched_model:
-                return [matched_model]
+                return matched_model
         
         match_result = self._rematch_pattern.match(model_id)
         if match_result:
