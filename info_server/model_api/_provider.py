@@ -65,11 +65,13 @@ class ModelProvider:
     
     @property
     def uids(self) -> list[str]:
-        return list(f"{self._id}/{model}" for model in self.models_key_gen())
+        now = time.time_ns()
+        return list(f"{self._id}/{model}" for model in self.models_key_gen(now))
     
     @property
     def uid_tuples(self) -> list[tuple[str, str]]:
-        return list((self._id, model) for model in self.models_key_gen())
+        now = time.time_ns()
+        return list((self._id, model) for model in self.models_key_gen(now))
     
     @property
     def name(self) -> str:
